@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Arcane Survivors</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- HUD Overlay -->
+      <div id="hud" class="hidden">
+        <div id="hud-top">
+          <div id="health-container">
+            <div id="health-bar">
+              <div id="health-fill"></div>
+            </div>
+            <span id="health-text">100/100</span>
+          </div>
+          <div id="xp-container">
+            <div id="xp-bar">
+              <div id="xp-fill"></div>
+            </div>
+            <span id="level-text">Lv 1</span>
+          </div>
+        </div>
+        <div id="hud-bottom">
+          <div id="timer">00:00</div>
+          <div id="kill-count">☠ 0</div>
+          <div id="coin-count">💰 0</div>
+        </div>
+        <div id="hud-right">
+          <div id="weapon-section">
+            <div class="slot-section-label">Weapons</div>
+            <div id="weapon-slots"></div>
+          </div>
+          <div id="passive-section">
+            <div class="slot-section-label">Passives</div>
+            <div id="passive-slots"></div>
+          </div>
+        </div>
+        <div id="item-tooltip" class="hidden">
+          <div id="tooltip-header">
+            <span id="tooltip-icon"></span>
+            <span id="tooltip-name"></span>
+            <span id="tooltip-level"></span>
+          </div>
+          <div id="tooltip-rarity"></div>
+          <div id="tooltip-description"></div>
+          <div id="tooltip-stats"></div>
+        </div>
+      </div>
+
+      <!-- Main Menu -->
+      <div id="main-menu" class="menu-screen">
+        <h1 class="game-title">⚔️ ARCANE SURVIVORS ⚔️</h1>
+        <p class="subtitle">A Bullet Heaven Adventure</p>
+        <div class="menu-buttons">
+          <button id="btn-play" class="menu-btn primary">▶ START GAME</button>
+          <button id="btn-characters" class="menu-btn">👤 CHARACTERS</button>
+          <button id="btn-codex" class="menu-btn">📖 CODEX</button>
+          <button id="btn-shop" class="menu-btn">🏪 POWER-UPS</button>
+          <button id="btn-stats" class="menu-btn">📊 STATISTICS</button>
+        </div>
+        <div id="total-coins" class="coin-display">💰 0</div>
+      </div>
+
+      <!-- Character Select -->
+      <div id="character-select" class="menu-screen hidden">
+        <h2>SELECT YOUR HERO</h2>
+        <div id="character-list"></div>
+        <button id="btn-back-char" class="menu-btn back-btn">← BACK</button>
+      </div>
+
+      <!-- Shop -->
+      <div id="shop-screen" class="menu-screen hidden">
+        <h2>🏪 POWER-UPS SHOP</h2>
+        <div id="shop-coins" class="coin-display">💰 0</div>
+        <div id="shop-list"></div>
+        <button id="btn-back-shop" class="menu-btn back-btn">← BACK</button>
+      </div>
+
+      <!-- Stats Screen -->
+      <div id="stats-screen" class="menu-screen hidden">
+        <h2>📊 STATISTICS</h2>
+        <div id="stats-list"></div>
+        <button id="btn-back-stats" class="menu-btn back-btn">← BACK</button>
+      </div>
+
+      <!-- Codex Screen -->
+      <div id="codex-screen" class="menu-screen hidden">
+        <h2>📖 WEAPON CODEX</h2>
+        <p class="subtitle">Discover weapons by finding them in-game</p>
+        <div id="codex-list"></div>
+        <button id="btn-back-codex" class="menu-btn back-btn">← BACK</button>
+      </div>
+
+      <!-- Level Up Screen -->
+      <div id="level-up-screen" class="overlay-screen hidden">
+        <h2>⬆️ LEVEL UP!</h2>
+        <p id="current-level">Level 2</p>
+        <div id="upgrade-choices"></div>
+      </div>
+
+      <!-- Pause Screen -->
+      <div id="pause-screen" class="overlay-screen hidden">
+        <h2>⏸️ PAUSED</h2>
+        <div class="menu-buttons">
+          <button id="btn-resume" class="menu-btn primary">▶ RESUME</button>
+          <button id="btn-quit" class="menu-btn danger">🚪 QUIT TO MENU</button>
+        </div>
+      </div>
+
+      <!-- Game Over Screen -->
+      <div id="gameover-screen" class="overlay-screen hidden">
+        <h2 id="gameover-title">💀 GAME OVER</h2>
+        <div id="gameover-stats"></div>
+        <div class="menu-buttons">
+          <button id="btn-retry" class="menu-btn primary">🔄 TRY AGAIN</button>
+          <button id="btn-menu" class="menu-btn">🏠 MAIN MENU</button>
+        </div>
+      </div>
+
+      <!-- Victory Screen -->
+      <div id="victory-screen" class="overlay-screen hidden">
+        <h2>🏆 VICTORY!</h2>
+        <p>You survived the night!</p>
+        <div id="victory-stats"></div>
+        <div class="menu-buttons">
+          <button id="btn-victory-menu" class="menu-btn primary">
+            🏠 MAIN MENU
+          </button>
+        </div>
+      </div>
+
+      <!-- Chest Screen -->
+      <div id="chest-screen" class="overlay-screen hidden">
+        <h2>🎁 TREASURE CHEST!</h2>
+        <div id="chest-contents"></div>
+        <button id="btn-chest-close" class="menu-btn primary">CONTINUE</button>
+      </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
