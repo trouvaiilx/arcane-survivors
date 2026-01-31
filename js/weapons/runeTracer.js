@@ -29,8 +29,13 @@ export class RuneTracer extends Weapon {
                     duration: this.duration,
                     size: 10 * this.area,
                     color: '#22d3ee',
-                    type: 'bounce',
+                    type: 'projectile',
+                    shape: 'rune',
+                    pattern: 'bounce',
                     bounces: 999, // Bounces until duration expires
+                    rotationSpeed: 5,
+                    trailLength: 8,
+                    pulseSpeed: 10,
                 });
             }, i * 200);
         }

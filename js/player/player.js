@@ -60,6 +60,7 @@ export class Player {
         
         // Level & XP
         this.level = 1;
+        this.revivalsUsed = 0; // Track used revivals
         this.xp = 0;
         this.xpToLevel = GAME_CONFIG.xp.baseToLevel;
         
@@ -112,6 +113,9 @@ export class Player {
         let luckMultiplier = 1;
         let growthMultiplier = 1;
         let projectilesBonus = 0;
+        let curseMultiplier = 1; // Curse makes enemies take more damage
+        let greedMultiplier = 1; // Greed increases coin value
+        let revivalBonus = 0;
         
         // Apply passive effects
         for (const passive of this.passives) {
@@ -130,6 +134,9 @@ export class Player {
             if (effect.luck) luckMultiplier += effect.luck * level;
             if (effect.growth) growthMultiplier += effect.growth * level;
             if (effect.projectiles) projectilesBonus += Math.floor(effect.projectiles * level);
+            if (effect.curse) curseMultiplier += effect.curse * level;
+            if (effect.greed) greedMultiplier += effect.greed * level;
+            if (effect.revival) revivalBonus += effect.revival * level;
         }
         
         // Calculate final stats
@@ -145,6 +152,12 @@ export class Player {
         this.luck = this.baseLuck * luckMultiplier;
         this.growth = this.baseGrowth * growthMultiplier;
         this.projectiles = this.baseProjectiles + projectilesBonus;
+        this.curse = curseMultiplier; // How much extra damage enemies take
+        this.greed = this.baseGreed * greedMultiplier; // Coin value multiplier
+        
+        // Calculate revivals: Base + Bonus - Used
+        // We use Math.max(0, ...) to prevent negative revivals if logic desyncs
+        this.revivals = Math.max(0, (this.baseRevivals || 0) + revivalBonus - (this.revivalsUsed || 0));
     }
     
     /**
@@ -236,8 +249,12 @@ export class Player {
     takeDamage(amount) {
         if (this.invincible) return;
         
+        // Apply curse multiplier (bidirectional - player also takes more damage)
+        const curseMultiplier = this.curse || 1;
+        const cursedAmount = amount * curseMultiplier;
+        
         // Apply armor
-        const finalDamage = Math.max(1, amount - this.armor);
+        const finalDamage = Math.max(1, cursedAmount - this.armor);
         this.hp -= finalDamage;
         this.game.addDamageTaken(finalDamage);
         
@@ -255,9 +272,31 @@ export class Player {
         if (this.hp <= 0) {
             if (this.revivals > 0) {
                 // Revive
-                this.revivals--;
+                this.revivalsUsed = (this.revivalsUsed || 0) + 1;
                 this.hp = this.maxHp / 2;
                 this.game.particles.burst(this.x, this.y, '#fbbf24', 30);
+                
+                // Tiragisu Logic: Consume one instance/level
+                const tiragisuIndex = this.passives.findIndex(p => p.id === 'tiragisu');
+                if (tiragisuIndex !== -1) {
+                    const tiragisu = this.passives[tiragisuIndex];
+                    if (tiragisu.level > 1) {
+                        tiragisu.level--;
+                    } else {
+                        this.passives.splice(tiragisuIndex, 1);
+                    }
+                    
+                    // Since we consumed the item that gave the revival, we shouldn't count it as "used" 
+                    // against the remaining pool (the pool itself shrank).
+                    this.revivalsUsed--; 
+                    
+                    // Recalculate stats to reflect lost item
+                    this.recalculateStats();
+                } else {
+                    // Normal revival (shop/character bonus)
+                    // Just recalculate to update UI
+                    this.recalculateStats();
+                }
             } else {
                 this.game.gameOver();
             }

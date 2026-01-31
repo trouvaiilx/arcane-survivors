@@ -9,8 +9,18 @@ export const GAME_CONFIG = {
     mapHeight: 4000,
     
     // Victory/Game
-    victoryTime: 30 * 60 * 1000, // 30 minutes in ms
-    difficultyScaling: 0.08, // % increase per minute
+    bossSpawnTime: 15 * 60 * 1000, // 15 minutes - boss spawns
+    miniBossInterval: 5 * 60 * 1000, // Mini-boss every 5 minutes
+    difficultyScaleInterval: 3 * 60 * 1000, // Difficulty increases every 3 minutes AFTER boss
+    
+    // Difficulty scaling (only applies after killing 15-min boss)
+    difficultyTiers: [
+        { name: 'Survivor', hpMult: 1.3, dmgMult: 1.2, spawnMult: 1.2, goldMult: 1.2 },
+        { name: 'Veteran', hpMult: 1.6, dmgMult: 1.4, spawnMult: 1.4, goldMult: 1.4 },
+        { name: 'Elite', hpMult: 2.0, dmgMult: 1.6, spawnMult: 1.6, goldMult: 1.6 },
+        { name: 'Nightmare', hpMult: 2.5, dmgMult: 1.8, spawnMult: 1.8, goldMult: 1.8 },
+        { name: 'Endless', hpMult: 3.0, dmgMult: 2.0, spawnMult: 2.0, goldMult: 2.0 }, // Base for 15+ min after boss
+    ],
     
     // Player defaults
     player: {
@@ -36,6 +46,7 @@ export const GAME_CONFIG = {
         coinDropChance: 0.05,
         chickenDropChance: 0.01,
         chestDropChance: 0.002,
+        magnetDropChance: 0.002, // 0.2% chance to drop magnet
     },
     
     // Spawning
@@ -44,7 +55,6 @@ export const GAME_CONFIG = {
         minSpawnInterval: 200,
         spawnDistance: 500, // Distance from player
         maxEnemies: 500,
-        bossSpawnTimes: [10 * 60 * 1000, 20 * 60 * 1000, 28 * 60 * 1000], // 10, 20, 28 min
     },
 };
 
@@ -70,8 +80,8 @@ export const CHARACTERS = {
         bonus: { projectiles: 1 },
         bonusText: '+1 Projectile',
         unlocked: false,
-        unlockCondition: { type: 'surviveTime', value: 10 * 60 * 1000 },
-        unlockText: 'Survive 10 minutes',
+        unlockCondition: { type: 'surviveTime', value: 8 * 60 * 1000 },
+        unlockText: 'Survive 8 minutes',
     },
     imelda: {
         id: 'imelda',
@@ -81,8 +91,8 @@ export const CHARACTERS = {
         bonus: { growth: 1.15 },
         bonusText: '+15% XP',
         unlocked: false,
-        unlockCondition: { type: 'surviveTime', value: 15 * 60 * 1000 },
-        unlockText: 'Survive 15 minutes',
+        unlockCondition: { type: 'surviveTime', value: 12 * 60 * 1000 },
+        unlockText: 'Survive 12 minutes',
     },
     mortaccio: {
         id: 'mortaccio',
@@ -92,8 +102,8 @@ export const CHARACTERS = {
         bonus: { projectiles: 1, speed: 0.9 },
         bonusText: '+1 Projectile, -10% Speed',
         unlocked: false,
-        unlockCondition: { type: 'kills', value: 1000 },
-        unlockText: 'Kill 1000 enemies in one run',
+        unlockCondition: { type: 'kills', value: 800 },
+        unlockText: 'Kill 800 enemies in one run',
     },
     pasqualina: {
         id: 'pasqualina',
@@ -103,8 +113,8 @@ export const CHARACTERS = {
         bonus: { cooldown: 0.9, area: 1.1 },
         bonusText: '-10% Cooldown, +10% Area',
         unlocked: false,
-        unlockCondition: { type: 'surviveTime', value: 20 * 60 * 1000 },
-        unlockText: 'Survive 20 minutes',
+        unlockCondition: { type: 'bossKill', value: 1 },
+        unlockText: 'Defeat the 15-minute Boss',
     },
     lama: {
         id: 'lama',
@@ -114,8 +124,8 @@ export const CHARACTERS = {
         bonus: { speed: 1.2, damage: 0.85 },
         bonusText: '+20% Speed, -15% Damage',
         unlocked: false,
-        unlockCondition: { type: 'kills', value: 2000 },
-        unlockText: 'Kill 2000 enemies in one run',
+        unlockCondition: { type: 'kills', value: 1500 },
+        unlockText: 'Kill 1500 enemies in one run',
     },
     porta: {
         id: 'porta',
@@ -125,8 +135,8 @@ export const CHARACTERS = {
         bonus: { armor: 3, maxHp: 1.2 },
         bonusText: '+3 Armor, +20% Max HP',
         unlocked: false,
-        unlockCondition: { type: 'surviveTime', value: 25 * 60 * 1000 },
-        unlockText: 'Survive 25 minutes',
+        unlockCondition: { type: 'surviveTime', value: 18 * 60 * 1000 },
+        unlockText: 'Survive 18 minutes (past the portal)',
     },
     exdash: {
         id: 'exdash',
@@ -136,8 +146,19 @@ export const CHARACTERS = {
         bonus: { luck: 1.5, maxHp: 0.5 },
         bonusText: '+50% Luck, -50% Max HP',
         unlocked: false,
-        unlockCondition: { type: 'kills', value: 3000 },
-        unlockText: 'Kill 3000 enemies in one run',
+        unlockCondition: { type: 'kills', value: 7500 },
+        unlockText: 'Kill 7,500 enemies in one run',
+    },
+    reaper: {
+        id: 'reaper',
+        name: 'The Reaper',
+        sprite: '☠️',
+        startingWeapon: 'reaperScythe',
+        bonus: { damage: 1.2 },
+        bonusText: '+20% Might',
+        unlocked: false,
+        unlockCondition: { type: 'kills', value: 15000 },
+        unlockText: 'Kill 15,000 enemies in one run',
     },
 };
 
@@ -189,7 +210,7 @@ export const WEAPONS = {
         name: 'Knife',
         icon: '🗡️',
         rarity: 'COMMON',
-        description: 'Rapid-fire projectiles in facing direction',
+        description: 'Rapid-fire projectiles that auto-aim at random enemies',
         baseDamage: 8,
         baseCooldown: 400,
         baseProjectiles: 1,
@@ -454,30 +475,29 @@ export const WEAPONS = {
             { damage: 15, projectiles: 1 },
         ],
     },
-    runeTracer: {
-        id: 'runeTracer',
-        name: 'Rune Tracer',
-        icon: '💠',
+    spectralSword: {
+        id: 'spectralSword',
+        name: 'Spectral Sword',
+        icon: '⚔️',
         rarity: 'RARE',
-        description: 'Bouncing projectiles that ricochet off edges',
-        baseDamage: 15,
-        baseCooldown: 2500,
-        baseProjectiles: 1,
+        description: 'Orbiting swords that slash outward periodically',
+        baseDamage: 18,
+        baseCooldown: 1200,
+        baseProjectiles: 2,
         baseArea: 1,
-        baseDuration: 5000,
-        baseSpeed: 300,
-        pierce: 999,
+        baseDuration: 300,
+        baseSpeed: 400,
+        pierce: 3,
         maxLevel: 8,
-        type: 'projectile',
-        pattern: 'bounce',
+        type: 'orbital',
         upgrades: [
             { damage: 5 },
             { projectiles: 1 },
-            { speed: 30 },
-            { damage: 8 },
-            { duration: 1000 },
+            { damage: 6 },
+            { area: 0.15 },
             { projectiles: 1 },
-            { damage: 10 },
+            { damage: 8 },
+            { cooldown: -0.1 },
             { projectiles: 1, damage: 10 },
         ],
     },
@@ -648,22 +668,22 @@ export const WEAPONS = {
     },
     
     // ========== ADDITIONAL UNCOMMON WEAPONS ==========
-    fireChain: {
-        id: 'fireChain',
-        name: 'Fire Chain',
-        icon: '⛓️',
+    chainLightning: {
+        id: 'chainLightning',
+        name: 'Chain Lightning',
+        icon: '⚡',
         rarity: 'UNCOMMON',
-        description: 'Chain lightning that bounces between enemies',
-        baseDamage: 8,
+        description: 'Lightning that bounces between enemies',
+        baseDamage: 10,
         baseCooldown: 1400,
         baseProjectiles: 1,
         baseArea: 1,
-        baseDuration: 1,
-        baseSpeed: 400,
-        pierce: 3,
+        baseDuration: 150,
+        baseSpeed: 0,
+        pierce: 4,
         maxLevel: 8,
         type: 'chain',
-        chainCount: 3,
+        chainCount: 4,
         upgrades: [
             { damage: 3 },
             { pierce: 1 },
@@ -837,7 +857,7 @@ export const PASSIVES = {
         id: 'skullOManiac',
         name: "Skull O'Maniac",
         icon: '💀',
-        description: '+10% Curse (enemies take more damage)',
+        description: '+10% Curse (ALL damage increased - risky but powerful!)',
         maxLevel: 5,
         effect: { curse: 0.1 },
     },
@@ -1050,5 +1070,66 @@ export const POWERUPS = {
         baseCost: 1000,
         costMultiplier: 3,
         effect: { revival: 1 },
+    },
+};
+
+/**
+ * Boss definitions
+ */
+export const BOSSES = {
+    // 15-minute main boss
+    deathReaper: {
+        id: 'deathReaper',
+        name: 'THE DEATH REAPER',
+        emoji: '💀',
+        hp: 10000,
+        damage: 30,
+        speed: 80,
+        size: 60,
+        color: '#dc2626',
+        xpReward: 500,
+        coinReward: 100,
+    },
+};
+
+/**
+ * Mini-boss definitions (spawn every 5 minutes)
+ */
+export const MINI_BOSSES = {
+    giantBat: {
+        id: 'giantBat',
+        name: 'Giant Bat',
+        emoji: '🦇',
+        hp: 2000,
+        damage: 15,
+        speed: 120,
+        size: 40,
+        color: '#6b21a8',
+        xpReward: 100,
+        coinReward: 25,
+    },
+    skeletonKing: {
+        id: 'skeletonKing',
+        name: 'Skeleton King',
+        emoji: '👑',
+        hp: 3000,
+        damage: 20,
+        speed: 60,
+        size: 45,
+        color: '#f5f5dc',
+        xpReward: 150,
+        coinReward: 35,
+    },
+    demonLord: {
+        id: 'demonLord',
+        name: 'Demon Lord',
+        emoji: '👿',
+        hp: 4000,
+        damage: 25,
+        speed: 100,
+        size: 50,
+        color: '#7f1d1d',
+        xpReward: 200,
+        coinReward: 50,
     },
 };

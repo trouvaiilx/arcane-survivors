@@ -43,9 +43,12 @@ export class FireChain extends Weapon {
                 damage: this.damage,
                 pierce: this.pierce,
                 duration: 1500,
-                size: 8 * this.area,
+                size: 10 * this.area,
                 color: '#ff6600',
-                type: 'chain',
+                type: 'projectile',
+                shape: 'fire',
+                pattern: 'linear',
+                trailLength: 8,
             });
         }
     }

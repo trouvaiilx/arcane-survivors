@@ -20,10 +20,9 @@ export class Bone extends Weapon {
                 dx = target.x - this.player.x;
                 dy = target.y - this.player.y;
             } else {
-                // Random direction if no target
-                const angle = Math.random() * Math.PI * 2;
-                dx = Math.cos(angle);
-                dy = Math.sin(angle);
+                // Fire in facing direction if no target
+                dx = this.player.facingX || 1;
+                dy = this.player.facingY || 0;
             }
             
             // Normalize
@@ -51,10 +50,14 @@ export class Bone extends Weapon {
                 damage: this.damage,
                 pierce: this.pierce,
                 duration: this.duration,
-                size: 10 * this.area,
+                size: 12 * this.area,
                 color: '#f5deb3',
-                type: 'boomerang',
+                type: 'projectile',
+                shape: 'bone',
+                pattern: 'boomerang',
+                returnTime: this.duration / 2,
                 owner: this.player,
+                rotationSpeed: 8,
             });
         }
     }

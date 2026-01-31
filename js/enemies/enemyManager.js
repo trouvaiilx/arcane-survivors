@@ -131,9 +131,9 @@ export class EnemyManager {
             y: y,
             radius: data.radius,
             
-            // Stats scaled by difficulty
-            maxHp: data.hp * difficulty,
-            hp: data.hp * difficulty,
+            // Stats scaled by difficulty (base 1.20x HP multiplier)
+            maxHp: data.hp * difficulty * 1.20,
+            hp: data.hp * difficulty * 1.20,
             damage: data.damage * Math.sqrt(difficulty),
             speed: data.speed,
             xp: data.xp,
@@ -150,6 +150,8 @@ export class EnemyManager {
             dead: false,
             knockbackX: 0,
             knockbackY: 0,
+            slowFactor: 0,
+            slowTimer: 0,
             
             // Animation
             animTime: Math.random() * 1000,
@@ -163,6 +165,10 @@ export class EnemyManager {
             enemy.knockbackX += kx;
             enemy.knockbackY += ky;
         };
+        enemy.applySlow = (factor, duration) => {
+            enemy.slowFactor = Math.max(enemy.slowFactor, factor);
+            enemy.slowTimer = Math.max(enemy.slowTimer, duration);
+        };
         
         this.enemies.push(enemy);
         this.addToSpatialHash(enemy);
@@ -171,34 +177,131 @@ export class EnemyManager {
     }
     
     /**
-     * Check and spawn bosses
+     * Check and spawn bosses - now handled by game.js
      */
     checkBossSpawn() {
-        const bossSpawnTimes = GAME_CONFIG.spawning.bossSpawnTimes;
-        
-        while (
-            this.bossSpawnIndex < bossSpawnTimes.length &&
-            this.game.gameTime >= bossSpawnTimes[this.bossSpawnIndex]
-        ) {
-            this.spawnBoss();
-            this.bossSpawnIndex++;
-        }
+        // Boss spawning is now controlled by game.js
     }
     
     /**
-     * Spawn a boss enemy
+     * Spawn a boss enemy with custom data
      */
-    spawnBoss() {
-        const difficulty = this.game.getDifficultyMultiplier();
-        const boss = this.spawnEnemy('boss', difficulty * 1.5);
+    spawnBoss(bossData) {
+        // Validate and ensure proper HP
+        const bossHp = (bossData.hp || 10000) * 1.20;
         
-        if (boss) {
-            // Screen shake
-            this.game.camera.shake(15, 500);
+        const enemy = {
+            id: ++enemyIdCounter,
+            type: 'boss',
+            x: bossData.x,
+            y: bossData.y,
+            radius: bossData.size || 60,
             
-            // Visual effect
-            this.game.particles.burst(boss.x, boss.y, '#dc2626', 50);
-        }
+            maxHp: bossHp,
+            hp: bossHp,
+            currentHp: bossHp,
+            damage: bossData.damage || 30,
+            speed: bossData.speed || 80,
+            xp: bossData.xpReward || 500,
+            coinReward: bossData.coinReward || 100,
+            
+            isBoss: true,
+            isMiniBoss: false, // Explicitly not mini-boss
+            name: bossData.name || 'BOSS',
+            emoji: bossData.emoji || '💀',
+            color: bossData.color || '#dc2626',
+            
+            dead: false,
+            knockbackX: 0,
+            knockbackY: 0,
+            slowFactor: 0,
+            slowTimer: 0,
+            animTime: 0,
+            sprite: null,
+            knockbackResist: 1, // Prevent NaN position from knockback math
+        };
+        
+        // Add methods
+        enemy.update = (dt, player) => this.updateEnemy(enemy, dt, player);
+        enemy.takeDamage = (amount) => this.damageEnemy(enemy, amount);
+        enemy.applyKnockback = (kx, ky) => {
+            // Bosses have high knockback resistance
+            enemy.knockbackX += kx * 0.1;
+            enemy.knockbackY += ky * 0.1;
+        };
+        enemy.applySlow = (factor, duration) => {
+            enemy.slowFactor = Math.max(enemy.slowFactor, factor);
+            enemy.slowTimer = Math.max(enemy.slowTimer, duration);
+        };
+        
+        this.enemies.push(enemy);
+        this.addToSpatialHash(enemy);
+        
+        // Screen shake
+        this.game.camera.shake(15, 500);
+        
+        // Visual effect
+        this.game.particles.burst(enemy.x, enemy.y, '#dc2626', 50);
+        
+        return enemy;
+    }
+    
+    /**
+     * Spawn a mini-boss enemy with custom data
+     */
+    spawnMiniBoss(miniBossData) {
+        const enemy = {
+            id: ++enemyIdCounter,
+            type: 'miniboss',
+            x: miniBossData.x,
+            y: miniBossData.y,
+            radius: miniBossData.size,
+            
+            maxHp: miniBossData.hp * 1.20,
+            hp: miniBossData.hp * 1.20,
+            currentHp: miniBossData.hp * 1.20,
+            damage: miniBossData.damage,
+            speed: miniBossData.speed,
+            xp: miniBossData.xpReward,
+            coinReward: miniBossData.coinReward,
+            
+            isMiniBoss: true,
+            name: miniBossData.name,
+            emoji: miniBossData.emoji,
+            color: miniBossData.color,
+            
+            dead: false,
+            knockbackX: 0,
+            knockbackY: 0,
+            knockbackResist: 0.5, // Mini-boss has some knockback resistance
+            slowFactor: 0,
+            slowTimer: 0,
+            animTime: 0,
+            sprite: null,
+        };
+        
+        // Add methods
+        enemy.update = (dt, player) => this.updateEnemy(enemy, dt, player);
+        enemy.takeDamage = (amount) => this.damageEnemy(enemy, amount);
+        enemy.applyKnockback = (kx, ky) => {
+            enemy.knockbackX += kx * 0.5;
+            enemy.knockbackY += ky * 0.5;
+        };
+        enemy.applySlow = (factor, duration) => {
+            enemy.slowFactor = Math.max(enemy.slowFactor, factor);
+            enemy.slowTimer = Math.max(enemy.slowTimer, duration);
+        };
+        
+        this.enemies.push(enemy);
+        this.addToSpatialHash(enemy);
+        
+        // Screen shake
+        this.game.camera.shake(8, 300);
+        
+        // Visual effect
+        this.game.particles.burst(enemy.x, enemy.y, miniBossData.color, 30);
+        
+        return enemy;
     }
     
     /**
@@ -231,9 +334,18 @@ export class EnemyManager {
             }
         }
         
-        // Apply movement
-        enemy.x += dx * enemy.speed * dtSeconds;
-        enemy.y += dy * enemy.speed * dtSeconds;
+        // Apply slow (decay)
+        if (enemy.slowTimer > 0) {
+            enemy.slowTimer -= dt;
+            if (enemy.slowTimer <= 0) {
+                enemy.slowFactor = 0;
+            }
+        }
+        
+        // Apply movement (with slow)
+        const currentSpeed = enemy.speed * (1 - enemy.slowFactor);
+        enemy.x += dx * currentSpeed * dtSeconds;
+        enemy.y += dy * currentSpeed * dtSeconds;
         
         // Apply knockback
         if (enemy.knockbackX !== 0 || enemy.knockbackY !== 0) {
@@ -251,6 +363,32 @@ export class EnemyManager {
         // Clamp to map bounds
         enemy.x = Math.max(enemy.radius, Math.min(this.game.mapWidth - enemy.radius, enemy.x));
         enemy.y = Math.max(enemy.radius, Math.min(this.game.mapHeight - enemy.radius, enemy.y));
+        
+        // Validate position (prevent NaN from making enemy invisible)
+        // Only reset if ACTUALLY NaN, don't teleport - just stop movement
+        if (isNaN(enemy.x) || isNaN(enemy.y)) {
+            // Store last known good position if we don't have one
+            if (!enemy.lastGoodX) {
+                enemy.lastGoodX = this.game.mapWidth / 2;
+                enemy.lastGoodY = this.game.mapHeight / 2;
+            }
+            
+            // Reset to last known good position, NOT to player or random location
+            enemy.x = enemy.lastGoodX;
+            enemy.y = enemy.lastGoodY;
+            enemy.knockbackX = 0;
+            enemy.knockbackY = 0;
+            console.warn('Enemy position was NaN, recovered to last known position');
+        } else {
+            // Save current good position
+            enemy.lastGoodX = enemy.x;
+            enemy.lastGoodY = enemy.y;
+        }
+        
+        // Update boss health bar if this is the main boss
+        if (enemy.isBoss && this.game.currentBoss) {
+            this.game.updateBossHealthBar(enemy.hp, enemy.maxHp);
+        }
     }
     
     /**
@@ -259,14 +397,20 @@ export class EnemyManager {
     damageEnemy(enemy, amount) {
         if (enemy.dead) return;
         
-        enemy.hp -= amount;
+        // Apply curse multiplier (from Skull O'Maniac passive)
+        const curseMultiplier = this.game.player?.curse || 1;
+        const finalDamage = amount * curseMultiplier;
+        
+        enemy.hp -= finalDamage;
+        enemy.currentHp = enemy.hp;
         
         // Damage number
+        const color = enemy.isBoss ? '#fbbf24' : (enemy.isMiniBoss ? '#a855f7' : '#ffffff');
         this.game.damageNumbers.add(
             enemy.x + (Math.random() - 0.5) * 20,
             enemy.y - 10,
-            Math.floor(amount),
-            enemy.isBoss ? '#fbbf24' : '#ffffff'
+            Math.floor(finalDamage),
+            color
         );
         
         if (enemy.hp <= 0) {
@@ -289,18 +433,42 @@ export class EnemyManager {
         enemy.dead = true;
         this.game.addKill();
         
+        // Handle boss death
+        if (enemy.isBoss) {
+            this.game.onBossDefeated(enemy);
+        }
+        
+        // Handle mini-boss death - grant level with luck wheel
+        if (enemy.isMiniBoss) {
+            this.game.onMiniBossDefeated(enemy);
+        }
+        
         // Drop XP
         this.dropXp(enemy);
+        
+        // Drop coins for bosses/mini-bosses
+        if (enemy.coinReward) {
+            const coinCount = Math.ceil(enemy.coinReward / 5);
+            for (let i = 0; i < coinCount; i++) {
+                this.game.pickupManager?.spawn({
+                    type: 'coin',
+                    value: 5,
+                    x: enemy.x + (Math.random() - 0.5) * 50,
+                    y: enemy.y + (Math.random() - 0.5) * 50,
+                });
+            }
+        }
         
         // Random drops
         this.checkDrops(enemy);
         
         // Death effect
+        const color = enemy.color || (enemy.isBoss ? '#dc2626' : '#4a5568');
         this.game.particles.burst(
             enemy.x, 
             enemy.y, 
-            enemy.isBoss ? '#dc2626' : '#4a5568',
-            enemy.isBoss ? 30 : 10
+            color,
+            enemy.isBoss ? 50 : (enemy.isMiniBoss ? 30 : 10)
         );
     }
     
@@ -372,6 +540,15 @@ export class EnemyManager {
         if (enemy.isBoss || Math.random() < GAME_CONFIG.pickups.chestDropChance * luck) {
             this.game.pickupManager?.spawn({
                 type: 'chest',
+                x: enemy.x,
+                y: enemy.y,
+            });
+        }
+        
+        // Magnet drop (rare - collects all XP on map)
+        if (Math.random() < GAME_CONFIG.pickups.magnetDropChance * luck) {
+            this.game.pickupManager?.spawn({
+                type: 'magnet',
                 x: enemy.x,
                 y: enemy.y,
             });
@@ -463,7 +640,7 @@ export class EnemyManager {
             if (enemy.dead) continue;
             
             // Skip if off-screen
-            if (!this.game.camera.isVisible(enemy.x, enemy.y, 50)) continue;
+            if (!this.game.camera.isVisible(enemy.x, enemy.y, 80)) continue;
             
             ctx.save();
             ctx.translate(enemy.x, enemy.y);
@@ -471,9 +648,19 @@ export class EnemyManager {
             // Boss glow
             if (enemy.isBoss) {
                 ctx.globalAlpha = 0.3;
-                ctx.fillStyle = '#dc2626';
+                ctx.fillStyle = enemy.color || '#dc2626';
                 ctx.beginPath();
-                ctx.arc(0, 0, enemy.radius * 2, 0, Math.PI * 2);
+                ctx.arc(0, 0, enemy.radius * 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            
+            // Mini-boss glow
+            if (enemy.isMiniBoss) {
+                ctx.globalAlpha = 0.25;
+                ctx.fillStyle = enemy.color || '#a855f7';
+                ctx.beginPath();
+                ctx.arc(0, 0, enemy.radius * 1.8, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.globalAlpha = 1;
             }
@@ -483,8 +670,28 @@ export class EnemyManager {
                 ctx.globalAlpha = 0.7;
             }
             
-            // Draw sprite or fallback
-            if (enemy.sprite) {
+            // Slow effect (Blue tint)
+            if (enemy.slowTimer > 0) {
+                ctx.shadowColor = '#06b6d4';
+                ctx.shadowBlur = 10;
+            } else {
+                ctx.shadowBlur = 0;
+            }
+            
+            // Draw emoji for boss/mini-boss, sprite, or fallback
+            if (enemy.emoji && (enemy.isBoss || enemy.isMiniBoss)) {
+                // Draw colored circle background
+                ctx.fillStyle = enemy.color || '#4a5568';
+                ctx.beginPath();
+                ctx.arc(0, 0, enemy.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw emoji
+                ctx.font = `${enemy.radius}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(enemy.emoji, 0, 2);
+            } else if (enemy.sprite) {
                 ctx.drawImage(
                     enemy.sprite,
                     -enemy.sprite.width / 2,
@@ -492,27 +699,36 @@ export class EnemyManager {
                 );
             } else {
                 // Fallback circle
-                ctx.fillStyle = enemy.isBoss ? '#dc2626' : '#4a5568';
+                ctx.fillStyle = enemy.color || (enemy.isBoss ? '#dc2626' : '#4a5568');
                 ctx.beginPath();
                 ctx.arc(0, 0, enemy.radius, 0, Math.PI * 2);
                 ctx.fill();
             }
             
-            // Health bar for damaged enemies and bosses
-            if (enemy.hp < enemy.maxHp || enemy.isBoss) {
-                const barWidth = enemy.radius * 2;
-                const barHeight = 4;
+            // Health bar for damaged enemies, bosses, and mini-bosses
+            // (Boss health is shown in the sticky UI instead)
+            if (!enemy.isBoss && (enemy.hp < enemy.maxHp || enemy.isMiniBoss)) {
+                const barWidth = enemy.isMiniBoss ? enemy.radius * 3 : enemy.radius * 2;
+                const barHeight = enemy.isMiniBoss ? 6 : 4;
                 const barY = enemy.radius + 5;
                 
                 // Background
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                 ctx.fillRect(-barWidth / 2, barY, barWidth, barHeight);
+                
+                // Border for mini-bosses
+                if (enemy.isMiniBoss) {
+                    ctx.strokeStyle = enemy.color || '#a855f7';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(-barWidth / 2, barY, barWidth, barHeight);
+                }
                 
                 // Health
                 const healthPercent = enemy.hp / enemy.maxHp;
-                ctx.fillStyle = healthPercent > 0.5 ? '#22c55e' : 
-                               healthPercent > 0.25 ? '#fbbf24' : '#ef4444';
-                ctx.fillRect(-barWidth / 2, barY, barWidth * healthPercent, barHeight);
+                ctx.fillStyle = enemy.isMiniBoss ? (enemy.color || '#a855f7') :
+                               (healthPercent > 0.5 ? '#22c55e' : 
+                               healthPercent > 0.25 ? '#fbbf24' : '#ef4444');
+                ctx.fillRect(-barWidth / 2 + 1, barY + 1, (barWidth - 2) * healthPercent, barHeight - 2);
             }
             
             ctx.restore();

@@ -58,6 +58,8 @@ export class IceSpear extends Weapon {
                     size: 10 * this.area,
                     color: '#06b6d4',
                     type: 'projectile',
+                    shape: 'ice',
+                    trailLength: 10,
                     slow: 0.5, // Slow enemies by 50%
                 });
             }, i * 50);

@@ -36,6 +36,7 @@ export class Cross extends Weapon {
                     returnTime: this.duration / 2,
                     rotation: 0,
                     rotationSpeed: 10,
+                    trailLength: 8,
                 });
             }, i * 100);
         }

@@ -83,11 +83,44 @@ export class Garlic extends Weapon {
      */
     renderAura(ctx) {
         ctx.save();
-        ctx.globalAlpha = 0.15;
-        ctx.fillStyle = '#22c55e';
+        
+        const pulse = 1 + Math.sin(Date.now() * 0.003) * 0.1;
+        const radius = this.radius * pulse;
+        
+        // Outer gradient aura
+        const gradient = ctx.createRadialGradient(
+            this.player.x, this.player.y, 0,
+            this.player.x, this.player.y, radius
+        );
+        gradient.addColorStop(0, 'rgba(34, 197, 94, 0.05)');
+        gradient.addColorStop(0.5, 'rgba(34, 197, 94, 0.15)');
+        gradient.addColorStop(0.8, 'rgba(34, 197, 94, 0.1)');
+        gradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+        
+        ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(this.player.x, this.player.y, this.radius, 0, Math.PI * 2);
+        ctx.arc(this.player.x, this.player.y, radius, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Pulsing ring
+        ctx.strokeStyle = `rgba(34, 197, 94, ${0.3 + Math.sin(Date.now() * 0.005) * 0.2})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(this.player.x, this.player.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Floating particles around edge
+        ctx.fillStyle = 'rgba(134, 239, 172, 0.6)';
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2 + Date.now() * 0.001;
+            const particleRadius = radius * (0.85 + Math.sin(Date.now() * 0.004 + i) * 0.1);
+            const x = this.player.x + Math.cos(angle) * particleRadius;
+            const y = this.player.y + Math.sin(angle) * particleRadius;
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
         ctx.restore();
     }
 }

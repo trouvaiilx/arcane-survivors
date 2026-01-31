@@ -33,7 +33,9 @@ export class Axe extends Weapon {
                     pattern: 'arc',
                     gravity: 200, // Pixels per second^2
                     rotation: 0,
-                    rotationSpeed: 8, // Radians per second
+                    rotationSpeed: 8,
+                    trailLength: 10,
+                    glowIntensity: 0.8, // Radians per second
                 });
             }, i * 150);
         }

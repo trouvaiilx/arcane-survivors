@@ -12,7 +12,9 @@ import { PickupManager } from '../pickups/pickupManager.js';
 import { DamageNumbers } from '../effects/damageNumbers.js';
 import { Particles } from '../effects/particles.js';
 import { SaveManager } from '../meta/saveManager.js';
-import { GAME_CONFIG } from '../data/config.js';
+import { Minimap } from '../ui/minimap.js';
+import { Portal } from '../entities/portal.js';
+import { GAME_CONFIG, BOSSES, MINI_BOSSES } from '../data/config.js';
 
 export const GameState = {
     MENU: 'menu',
@@ -67,8 +69,30 @@ export class Game {
         this.mapWidth = GAME_CONFIG.mapWidth;
         this.mapHeight = GAME_CONFIG.mapHeight;
         
-        // Victory condition
-        this.victoryTime = GAME_CONFIG.victoryTime; // 30 minutes
+        // Boss and portal system
+        this.currentBoss = null;
+        this.bossDefeated = false;
+        this.portal = null; // Portal spark or constructed portal
+        this.portalSparkTouched = false;
+        this.minimap = null;
+        
+        // Difficulty scaling (only after boss defeated)
+        this.difficultyTier = 0;
+        this.lastDifficultyScaleTime = 0;
+        this.goldMultiplier = 1;
+        this.temporaryLuckBonus = 0; // Temporary luck from mini-boss kill
+        
+        // Mini-boss tracking
+        this.lastMiniBossTime = 0;
+        this.miniBossCount = 0;
+        
+        // Countdown timer (15 minutes)
+        this.countdownTime = GAME_CONFIG.bossSpawnTime;
+        
+        // Game start animation
+        this.fadeInProgress = 0;
+        this.startupMessageShown = false;
+        this.timeWarningShown = false;
         
         // Bind methods
         this.gameLoop = this.gameLoop.bind(this);
@@ -95,6 +119,20 @@ export class Game {
         this.damageDealt = 0;
         this.damageTaken = 0;
         
+        // Reset boss/portal state
+        this.currentBoss = null;
+        this.bossDefeated = false;
+        this.portalSparkTouched = false;
+        this.sparkSpawned = false;
+        this.difficultyTier = 0;
+        this.lastDifficultyScaleTime = 0;
+        this.goldMultiplier = 1;
+        this.lastMiniBossTime = 0;
+        this.miniBossCount = 0;
+        this.fadeInProgress = 0;
+        this.startupMessageShown = false;
+        this.timeWarningShown = false;
+        
         // Create player
         this.player = new Player(this, characterId);
         this.player.x = this.mapWidth / 2;
@@ -104,6 +142,9 @@ export class Game {
         this.enemyManager = new EnemyManager(this);
         this.projectileManager = new ProjectileManager(this);
         this.pickupManager = new PickupManager(this);
+        
+        // Create minimap
+        this.minimap = new Minimap(this);
         
         // Reset systems
         this.damageNumbers.clear();
@@ -115,10 +156,93 @@ export class Game {
         // Change state
         this.setState(GameState.PLAYING);
         
+        // Show startup message after fade
+        setTimeout(() => {
+            this.showStartupMessage();
+        }, 500);
+        
         // Start game loop
         this.lastTime = performance.now();
         this.accumulator = 0;
         requestAnimationFrame(this.gameLoop);
+    }
+    
+    /**
+     * Spawn portal spark at random location
+     */
+    spawnPortalSpark() {
+        const margin = 500;
+        const x = margin + Math.random() * (this.mapWidth - margin * 2);
+        const y = margin + Math.random() * (this.mapHeight - margin * 2);
+        
+        this.portal = new Portal(this, x, y, 'spark');
+    }
+    
+    /**
+     * Handle player touching the portal spark
+     */
+    onSparkTouched(sparkX, sparkY) {
+        this.portalSparkTouched = true;
+        this.portal = null;
+        
+        // Spawn boss near the player
+        this.spawnBoss();
+        
+        // Show warning
+        this.showBossWarning();
+    }
+    
+    /**
+     * Show startup message
+     */
+    showStartupMessage() {
+        if (this.startupMessageShown) return;
+        this.startupMessageShown = true;
+        
+        const overlay = document.getElementById('startup-overlay');
+        if (overlay) {
+            // overlay.classList.remove('hidden');
+            // setTimeout(() => {
+            //     overlay.classList.add('hidden');
+            // }, 3500);
+            
+            if (this.ui) {
+                this.ui.toggleScreen(overlay, true);
+                setTimeout(() => {
+                    this.ui.toggleScreen(overlay, false);
+                }, 3500);
+            }
+        }
+    }
+    
+    /**
+     * Show boss incoming warning
+     */
+    showBossWarning() {
+        const warning = document.getElementById('boss-warning');
+        if (warning) {
+            if (this.ui) {
+                this.ui.toggleScreen(warning, true);
+                setTimeout(() => {
+                    this.ui.toggleScreen(warning, false);
+                }, 2000);
+            }
+        }
+    }
+
+    /**
+     * Show spark spawned notification
+     */
+    showSparkSpawnedMessage() {
+        const overlay = document.getElementById('spark-notification');
+        if (overlay) {
+            if (this.ui) {
+                this.ui.toggleScreen(overlay, true);
+                setTimeout(() => {
+                    this.ui.toggleScreen(overlay, false);
+                }, 4000);
+            }
+        }
     }
     
     /**
@@ -163,10 +287,54 @@ export class Game {
         this.gameTime += dt;
         this.realTime += dt;
         
-        // Check victory condition
-        if (this.gameTime >= this.victoryTime) {
-            this.victory();
-            return;
+        // Update fade-in progress
+        if (this.fadeInProgress < 1) {
+            this.fadeInProgress += dt / 1000; // 1 second fade
+        }
+        
+        // Check for mini-boss spawn at 10:00 and 5:00 countdown (before player touches spark)
+        if (!this.portalSparkTouched && !this.currentBoss) {
+            const countdownMs = GAME_CONFIG.bossSpawnTime - this.gameTime;
+            
+            // Spawn mini-boss at 10:00 remaining (600000ms) and 5:00 remaining (300000ms)
+            // Use a 1-second window to catch the spawn
+            if (this.miniBossCount === 0 && countdownMs <= 600000 && countdownMs > 599000) {
+                this.spawnMiniBoss();
+            } else if (this.miniBossCount === 1 && countdownMs <= 300000 && countdownMs > 299000) {
+                this.spawnMiniBoss();
+            }
+        }
+        
+        // Difficulty scaling tracking
+        // At countdown 0:00 (game time = 15 min), start showing warnings if boss is defeated
+        // or every 3 minutes after that
+        const countdownTime = GAME_CONFIG.bossSpawnTime - this.gameTime;
+        
+        // Check for portal spark spawn at 15 minutes
+        if (countdownTime <= 0 && !this.sparkSpawned && !this.portal && !this.portalSparkTouched && !this.currentBoss) {
+            this.spawnPortalSpark();
+            this.sparkSpawned = true;
+            this.showSparkSpawnedMessage();
+        }
+        
+        // Check if countdown just hit zero or went negative - difficulty scaling every 3 minutes
+        if (countdownTime <= 0) {
+            const timeAfterZero = Math.abs(countdownTime);
+            const scaleInterval = GAME_CONFIG.difficultyScaleInterval;
+            const newTier = Math.floor(timeAfterZero / scaleInterval) + 1;
+            
+            if (newTier > this.difficultyTier && newTier <= GAME_CONFIG.difficultyTiers.length) {
+                this.difficultyTier = newTier;
+                this.showDifficultyWarning(newTier);
+            }
+        }
+        
+        // Show time warning when countdown is low (but spark hasn't spawned yet)
+        if (!this.portalSparkTouched && !this.timeWarningShown) {
+            if (countdownTime <= 60000 && countdownTime > 59000) {
+                this.showTimeWarning('1 minute remaining! Prepare for the challenge!');
+                this.timeWarningShown = true;
+            }
         }
         
         // Update player
@@ -180,8 +348,265 @@ export class Game {
         this.projectileManager.update(dt);
         this.pickupManager.update(dt);
         
+        // Update portal
+        if (this.portal) {
+            this.portal.update(dt);
+        }
+        
+        // Update minimap
+        if (this.minimap) {
+            this.minimap.update();
+        }
+        
         // Check collisions
         this.checkCollisions();
+    }
+    
+    /**
+     * Spawn the 15-minute boss
+     */
+    spawnBoss() {
+        const bossData = BOSSES.deathReaper;
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 400;
+        
+        const spawnX = this.player.x + Math.cos(angle) * distance;
+        const spawnY = this.player.y + Math.sin(angle) * distance;
+        
+        // Create boss data for enemy manager
+        const bossSpawnData = {
+            ...bossData,
+            x: spawnX,
+            y: spawnY,
+            isBoss: true,
+        };
+        
+        // Add to enemy manager and get the actual enemy reference
+        const actualBoss = this.enemyManager.spawnBoss(bossSpawnData);
+        
+        // Store reference to actual enemy (not a copy)
+        this.currentBoss = actualBoss;
+        
+        // Show boss health bar
+        this.showBossHealthBar(bossData.name);
+    }
+    
+    /**
+     * Spawn a mini-boss
+     */
+    spawnMiniBoss() {
+        const miniBossKeys = Object.keys(MINI_BOSSES);
+        const miniBossKey = miniBossKeys[this.miniBossCount % miniBossKeys.length];
+        const miniBossData = MINI_BOSSES[miniBossKey];
+        
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 400;
+        
+        const miniBoss = {
+            ...miniBossData,
+            x: this.player.x + Math.cos(angle) * distance,
+            y: this.player.y + Math.sin(angle) * distance,
+            maxHp: miniBossData.hp,
+            currentHp: miniBossData.hp,
+            isMiniBoss: true,
+        };
+        
+        this.enemyManager.spawnMiniBoss(miniBoss);
+        this.miniBossCount++;
+    }
+    
+    /**
+     * Handle boss death
+     */
+    onBossDefeated(boss) {
+        this.bossDefeated = true;
+        this.currentBoss = null;
+        
+        // Hide boss health bar
+        this.hideBossHealthBar();
+        
+        // Spawn constructed portal at boss death location
+        this.portal = new Portal(this, boss.x, boss.y, 'constructed');
+        
+        // Apply gold bonus
+        this.goldMultiplier = GAME_CONFIG.difficultyTiers[0].goldMult;
+        
+        // Track for character unlock
+        SaveManager.recordBossKill();
+        SaveManager.checkUnlocks(this.gameTime, this.killCount);
+        
+        // Show portal constructed message
+        this.showPortalConstructedMessage();
+    }
+    
+    /**
+     * Handle mini-boss death - grants +1 level with luck wheel spin
+     */
+    onMiniBossDefeated(miniBoss) {
+        // Grant +1 level to player
+        if (this.player) {
+            // Trigger gold wheel spin then level up
+            this.showGoldWheelSpin(() => {
+                // Reset state to PLAYING first to ensure clean transition
+                this.setState(GameState.PLAYING);
+                
+                // Allow a small delay for UI to clear before showing level up
+                setTimeout(() => {
+                    this.player.levelUp();
+                    this.triggerLevelUp();
+                }, 100);
+            });
+        }
+    }
+    
+    /**
+     * Show gold wheel spin animation and apply gold reward
+     */
+    showGoldWheelSpin(callback) {
+        // Safety check: if UI is missing, skip wheel to prevent freeze
+        if (!this.ui) {
+            console.warn('UI not linked, skipping gold wheel');
+            callback();
+            return;
+        }
+
+        // Use LEVEL_UP state to freeze gameplay (not pause which shows menu)
+        this.setState(GameState.LEVEL_UP);
+        
+        // Random gold reward from 250 to 750 (in 50 increments)
+        // Options: 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750 (Jackpot!)
+        const goldOptions = [];
+        for (let i = 250; i <= 750; i += 50) {
+            goldOptions.push(i);
+        }
+        
+        const finalGold = goldOptions[Math.floor(Math.random() * goldOptions.length)];
+        
+        // Apply gold reward immediately (but visual animation will play)
+        import('../meta/saveManager.js').then(({ SaveManager }) => {
+            SaveManager.addCoins(finalGold);
+            
+            // Show the gold wheel UI
+            this.ui?.showLuckWheel(finalGold, () => {
+                // Callback after animation
+                callback();
+            });
+        });
+    }
+    
+    /**
+     * Show portal constructed message
+     */
+    showPortalConstructedMessage() {
+        const overlay = document.getElementById('portal-constructed-overlay');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 3000);
+        }
+    }
+    
+    /**
+     * Show time warning popup
+     */
+    showTimeWarning(message) {
+        const warning = document.getElementById('time-warning');
+        const text = document.getElementById('time-warning-text');
+        if (warning && text) {
+            text.textContent = message;
+            // warning.classList.remove('hidden');
+            // setTimeout(() => {
+            //     warning.classList.add('hidden');
+            // }, 3000);
+            
+            if (this.ui) {
+                this.ui.toggleScreen(warning, true);
+                setTimeout(() => {
+                    this.ui.toggleScreen(warning, false);
+                }, 3000);
+            }
+        }
+    }
+    
+    /**
+     * Get countdown time (15:00 to 00:00 to negative)
+     */
+    getCountdownTime() {
+        const countdownMs = GAME_CONFIG.bossSpawnTime - this.gameTime;
+        const absMs = Math.abs(countdownMs);
+        const minutes = Math.floor(absMs / 60000);
+        const seconds = Math.floor((absMs % 60000) / 1000);
+        const prefix = countdownMs < 0 ? '-' : '';
+        return `${prefix}${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+    
+    /**
+     * Get formatted time (alias for UI compatibility)
+     */
+    getFormattedTime() {
+        return this.getCountdownTime();
+    }
+    
+    /**
+     * Trigger victory when entering portal
+     */
+    triggerVictory() {
+        this.victory();
+    }
+    
+    /**
+     * Show boss health bar UI
+     */
+    showBossHealthBar(name) {
+        const container = document.getElementById('boss-health-container');
+        const nameEl = document.getElementById('boss-name');
+        if (container && nameEl) {
+            nameEl.textContent = name;
+            container.classList.remove('hidden');
+        }
+    }
+    
+    /**
+     * Hide boss health bar UI
+     */
+    hideBossHealthBar() {
+        const container = document.getElementById('boss-health-container');
+        if (container) {
+            container.classList.add('hidden');
+        }
+    }
+    
+    /**
+     * Update boss health bar UI
+     */
+    updateBossHealthBar(currentHp, maxHp) {
+        const fill = document.getElementById('boss-health-fill');
+        if (fill) {
+            const percent = Math.max(0, (currentHp / maxHp) * 100);
+            fill.style.width = percent + '%';
+        }
+    }
+    
+    /**
+     * Show difficulty scaling indicator (persistent, subtle)
+     */
+    showDifficultyWarning(tier) {
+        const tierData = GAME_CONFIG.difficultyTiers[tier - 1];
+        if (!tierData) return;
+        
+        this.goldMultiplier = tierData.goldMult;
+        
+        const indicator = document.getElementById('difficulty-indicator');
+        const text = document.getElementById('difficulty-text');
+        
+        if (indicator && text) {
+            // Format: "⚡ HARD MODE x1.5 DMG"
+            const dmgMult = tierData.dmgMult.toFixed(1);
+            const hpMult = tierData.hpMult.toFixed(1);
+            text.textContent = `⚡ ${tierData.name.toUpperCase()} • x${hpMult} HP • x${dmgMult} DMG`;
+            indicator.classList.remove('hidden');
+        }
     }
     
     /**
@@ -202,6 +627,11 @@ export class Game {
         
         // Draw ground grid
         this.renderGround(ctx);
+        
+        // Draw portal
+        if (this.portal) {
+            this.portal.render(ctx);
+        }
         
         // Draw pickups
         this.pickupManager?.render(ctx);
@@ -384,6 +814,7 @@ export class Game {
      * Open chest
      */
     openChest(contents) {
+        this.pendingChestItem = contents;
         this.setState(GameState.CHEST);
         if (this.onChestOpen) {
             this.onChestOpen(contents);
@@ -393,7 +824,18 @@ export class Game {
     /**
      * Close chest and continue
      */
-    closeChest() {
+    closeChest(shouldKeep = true) {
+        if (this.pendingChestItem && shouldKeep) {
+            this.player.applyUpgrade(this.pendingChestItem);
+        }
+        
+        this.pendingChestItem = null;
+        // this.ui?.elements['chest-screen']?.classList.add('hidden');
+        if (this.ui && this.ui.elements['chest-screen']) {
+            this.ui.toggleScreen(this.ui.elements['chest-screen'], false);
+        }
+        
+        // Resume game
         this.setState(GameState.PLAYING);
         this.lastTime = performance.now();
     }
@@ -503,10 +945,11 @@ export class Game {
     }
     
     /**
-     * Add coins
+     * Add coins with gold multiplier
      */
     addCoins(amount) {
-        this.coinsCollected += amount;
+        const multipliedAmount = Math.floor(amount * this.goldMultiplier);
+        this.coinsCollected += multipliedAmount;
     }
     
     /**
@@ -524,20 +967,28 @@ export class Game {
     }
     
     /**
-     * Get formatted game time
+     * Get difficulty multiplier based on tier (only after boss defeated)
      */
-    getFormattedTime() {
-        const totalSeconds = Math.floor(this.gameTime / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    getDifficultyMultiplier() {
+        if (!this.bossDefeated || this.difficultyTier === 0) {
+            // Normal difficulty before boss or first tier
+            const minutes = this.gameTime / 60000;
+            return 1 + (minutes * 0.05); // 5% per minute base scaling
+        }
+        
+        const tierData = GAME_CONFIG.difficultyTiers[Math.min(this.difficultyTier - 1, GAME_CONFIG.difficultyTiers.length - 1)];
+        return tierData ? tierData.hpMult : 1;
     }
     
     /**
-     * Get difficulty multiplier based on time
+     * Get damage multiplier for enemies
      */
-    getDifficultyMultiplier() {
-        const minutes = this.gameTime / 60000;
-        return 1 + (minutes * GAME_CONFIG.difficultyScaling);
+    getEnemyDamageMultiplier() {
+        if (!this.bossDefeated || this.difficultyTier === 0) {
+            return 1;
+        }
+        
+        const tierData = GAME_CONFIG.difficultyTiers[Math.min(this.difficultyTier - 1, GAME_CONFIG.difficultyTiers.length - 1)];
+        return tierData ? tierData.dmgMult : 1;
     }
 }

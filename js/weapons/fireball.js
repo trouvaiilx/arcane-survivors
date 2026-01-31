@@ -58,9 +58,25 @@ export class Fireball extends Weapon {
                     size: 12 * this.area,
                     color: '#ef4444',
                     type: 'projectile',
+                    shape: 'fireball',
+                    trailLength: 12,
+                    onHit: (proj, target) => {
+                        // AoE Damage
+                        const radius = 60 * this.area;
+                        const enemies = this.game.enemyManager.getEnemiesNear(proj.x, proj.y, radius);
+                        for (const enemy of enemies) {
+                            if (enemy !== target) { // Target already took damage from collision
+                                enemy.takeDamage(proj.damage);
+                                this.game.addDamageDealt(proj.damage);
+                            }
+                        }
+                        // Explosion Effect
+                        this.game.particles?.burst(proj.x, proj.y, '#ef4444', 20);
+                        this.game.camera.shake(2, 100);
+                    },
                     onExpire: (proj) => {
-                        // Explosion effect
-                        this.game.particles?.burst(proj.x, proj.y, '#ef4444', 8);
+                        // Explosion effect if expired without hitting
+                        this.game.particles?.burst(proj.x, proj.y, '#ef4444', 10);
                     }
                 });
             }, i * 100);

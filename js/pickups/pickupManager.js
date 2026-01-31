@@ -156,6 +156,8 @@ export class PickupManager {
                 
             case 'magnet':
                 this.magnetizeAllXp();
+                this.game.particles?.burst(pickup.x, pickup.y, '#ef4444', 30);
+                this.game.particles?.burst(player.x, player.y, '#22c55e', 20);
                 break;
                 
             case 'rosary':
@@ -177,7 +179,8 @@ export class PickupManager {
         
         if (options.length > 0) {
             const reward = options[0];
-            player.applyUpgrade(reward);
+            // Do NOT apply yet - wait for player choice in Chest UI
+            // player.applyUpgrade(reward);
             
             // Show chest screen
             this.game.openChest(reward);

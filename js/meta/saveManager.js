@@ -43,6 +43,7 @@ class SaveManagerClass {
                 victories: 0,
                 highestLevel: 1,
                 longestSurvival: 0,
+                bossKills: 0,
             },
         };
     }
@@ -234,6 +235,8 @@ class SaveManagerClass {
                 unlocked = true;
             } else if (cond.type === 'kills' && kills >= cond.value) {
                 unlocked = true;
+            } else if (cond.type === 'bossKill' && this.getBossKills() >= cond.value) {
+                unlocked = true;
             }
             
             if (unlocked) {
@@ -282,6 +285,25 @@ class SaveManagerClass {
     reset() {
         this.data = this.getDefaultSaveData();
         this.save();
+    }
+    
+    /**
+     * Record a boss kill for character unlocks
+     */
+    recordBossKill() {
+        if (!this.data) return;
+        if (!this.data.stats.bossKills) {
+            this.data.stats.bossKills = 0;
+        }
+        this.data.stats.bossKills++;
+        this.save();
+    }
+    
+    /**
+     * Get boss kill count
+     */
+    getBossKills() {
+        return this.data?.stats?.bossKills || 0;
     }
     
     /**

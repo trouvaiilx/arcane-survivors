@@ -11,17 +11,33 @@ export class Knife extends Weapon {
     }
     
     fire() {
-        const dx = this.player.facingX || 1;
-        const dy = this.player.facingY || 0;
-        
-        // Normalize
-        const len = Math.sqrt(dx * dx + dy * dy);
-        const ndx = len > 0 ? dx / len : 1;
-        const ndy = len > 0 ? dy / len : 0;
-        
         for (let i = 0; i < this.projectiles; i++) {
-            // Add spread
-            const spreadAngle = (i - (this.projectiles - 1) / 2) * 0.1;
+            // Try to find a random enemy to target
+            const target = this.game.enemyManager?.getRandomEnemyInRange(
+                this.player.x, 
+                this.player.y, 
+                500 // Range to search for enemies
+            );
+            
+            let dx, dy;
+            
+            if (target) {
+                // Aim at random enemy
+                dx = target.x - this.player.x;
+                dy = target.y - this.player.y;
+            } else {
+                // Fallback to facing direction
+                dx = this.player.facingX || 1;
+                dy = this.player.facingY || 0;
+            }
+            
+            // Normalize
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const ndx = len > 0 ? dx / len : 1;
+            const ndy = len > 0 ? dy / len : 0;
+            
+            // Add slight spread for multiple projectiles
+            const spreadAngle = (i - (this.projectiles - 1) / 2) * 0.08;
             const cos = Math.cos(spreadAngle);
             const sin = Math.sin(spreadAngle);
             const fdx = ndx * cos - ndy * sin;
@@ -40,6 +56,7 @@ export class Knife extends Weapon {
                 color: '#94a3b8',
                 type: 'projectile',
                 shape: 'knife',
+                trailLength: 6,
             });
         }
     }

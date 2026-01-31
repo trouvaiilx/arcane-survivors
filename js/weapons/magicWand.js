@@ -60,6 +60,9 @@ export class MagicWand extends Weapon {
                     size: 8 * this.area,
                     color: '#a78bfa',
                     type: 'projectile',
+                    shape: 'magic',
+                    pulseSpeed: 8,
+                    trailLength: 6,
                 });
             }, i * 80);
         }

@@ -58,20 +58,82 @@
           <div id="tooltip-description"></div>
           <div id="tooltip-stats"></div>
         </div>
+
+        <!-- Minimap -->
+        <div id="minimap-container">
+          <canvas id="minimap"></canvas>
+        </div>
+
+        <!-- Boss Health Bar -->
+        <div id="boss-health-container" class="hidden">
+          <div id="boss-name">BOSS NAME</div>
+          <div id="boss-health-bar">
+            <div id="boss-health-fill"></div>
+          </div>
+        </div>
+
+        <!-- Difficulty Multiplier Indicator (persistent, subtle) -->
+        <div id="difficulty-indicator" class="hidden">
+          <span id="difficulty-text"></span>
+        </div>
+
+        <!-- Startup Overlay -->
+        <div id="startup-overlay" class="game-overlay hidden">
+          <div class="overlay-content">
+            <div class="overlay-icon">⏱️</div>
+            <div class="overlay-title">SURVIVE THE HORDE</div>
+            <div class="overlay-desc">Survive for 15 minutes to reveal the portal spark</div>
+          </div>
+        </div>
+
+        <!-- Spark Notification -->
+        <div id="spark-notification" class="game-overlay hidden">
+          <div class="overlay-content spark-notification-content">
+            <div class="overlay-icon">⚡</div>
+            <div class="overlay-title">PORTAL SPARK APPEARED!</div>
+            <div class="overlay-desc">Find the spark to summon the boss!</div>
+          </div>
+        </div>
+
+        <!-- Boss Warning -->
+        <div id="boss-warning" class="game-overlay hidden">
+          <div class="overlay-content boss-warning-content">
+            <div class="overlay-icon">💀</div>
+            <div class="overlay-title">BOSS INCOMING!</div>
+          </div>
+        </div>
+
+        <!-- Time Warning -->
+        <div id="time-warning" class="game-overlay hidden">
+          <div class="overlay-content time-warning-content">
+            <div class="overlay-icon">⏰</div>
+            <div id="time-warning-text">Time is running out!</div>
+          </div>
+        </div>
+
+        <!-- Portal Constructed -->
+        <div id="portal-constructed-overlay" class="game-overlay hidden">
+          <div class="overlay-content portal-success-content">
+            <div class="overlay-icon">🌀</div>
+            <div class="overlay-title">PORTAL CONSTRUCTED!</div>
+            <div class="overlay-desc">Enter the portal to claim victory, or continue fighting</div>
+          </div>
+        </div>
       </div>
 
       <!-- Main Menu -->
-      <div id="main-menu" class="menu-screen">
-        <h1 class="game-title">⚔️ ARCANE SURVIVORS ⚔️</h1>
+      <div id="main-menu" class="menu-screen hidden">
+        <h1 class="game-title">Arcane Survivors</h1>
         <p class="subtitle">A Bullet Heaven Adventure</p>
         <div class="menu-buttons">
-          <button id="btn-play" class="menu-btn primary">▶ START GAME</button>
+          <button id="btn-play" class="menu-btn primary">▶ PLAY</button>
           <button id="btn-characters" class="menu-btn">👤 CHARACTERS</button>
+          <button id="btn-shop" class="menu-btn">🛒 POWERUPS</button>
+          <button id="btn-stats" class="menu-btn">📊 STATS</button>
           <button id="btn-codex" class="menu-btn">📖 CODEX</button>
-          <button id="btn-shop" class="menu-btn">🏪 POWER-UPS</button>
-          <button id="btn-stats" class="menu-btn">📊 STATISTICS</button>
         </div>
         <div id="total-coins" class="coin-display">💰 0</div>
+        <p class="version">v0.5.0</p>
       </div>
 
       <!-- Character Select -->
@@ -146,7 +208,6 @@
       <div id="chest-screen" class="overlay-screen hidden">
         <h2>🎁 TREASURE CHEST!</h2>
         <div id="chest-contents"></div>
-        <button id="btn-chest-close" class="menu-btn primary">CONTINUE</button>
       </div>
     </div>
 

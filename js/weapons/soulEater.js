@@ -62,6 +62,9 @@ export class SoulEater extends Weapon {
                     size: 12 * this.area,
                     color: '#a855f7',
                     type: 'projectile',
+                    shape: 'soul',
+                    trailLength: 10,
+                    pulseSpeed: 5,
                     onHit: (proj, enemy) => {
                         // Heal player on hit
                         const healAmount = proj.damage * self.lifesteal;

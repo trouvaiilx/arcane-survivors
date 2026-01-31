@@ -21,6 +21,7 @@ class UIClass {
      */
     init(game) {
         this.game = game;
+        game.ui = this; // Link UI back to game
         this.cacheElements();
         this.setupEventListeners();
         this.updateCoinDisplays();
@@ -166,7 +167,9 @@ class UIClass {
                 break;
                 
             case GameState.PAUSED:
-                this.elements['pause-screen']?.classList.remove('hidden');
+                // this.elements['pause-screen']?.classList.remove('hidden'); 
+                this.toggleScreen(this.elements['pause-screen'], true);
+                this.showPauseMenu();
                 break;
                 
             case GameState.LEVEL_UP:
@@ -186,16 +189,16 @@ class UIClass {
     /**
      * Hide all overlay screens
      */
+    /**
+     * Hide all overlay screens
+     */
     hideAllOverlays() {
-        const overlays = [
-            'main-menu', 'character-select', 'shop-screen', 'stats-screen',
-            'codex-screen', 'level-up-screen', 'pause-screen', 'gameover-screen',
-            'victory-screen', 'chest-screen'
-        ];
-        
-        for (const id of overlays) {
-            this.elements[id]?.classList.add('hidden');
-        }
+        const screens = document.querySelectorAll('.menu-screen, .overlay-screen');
+        screens.forEach(s => {
+            if (!s.classList.contains('hidden')) {
+                this.toggleScreen(s, false);
+            }
+        });
     }
     
     /**
@@ -203,7 +206,7 @@ class UIClass {
      */
     showMainMenu() {
         this.hideAllOverlays();
-        this.elements['main-menu']?.classList.remove('hidden');
+        this.toggleScreen(this.elements['main-menu'], true);
         this.elements['hud']?.classList.add('hidden');
         this.updateCoinDisplays();
     }
@@ -213,7 +216,7 @@ class UIClass {
      */
     showCharacterSelect() {
         this.hideAllOverlays();
-        this.elements['character-select']?.classList.remove('hidden');
+        this.toggleScreen(this.elements['character-select'], true);
         this.renderCharacterList();
     }
     
@@ -257,7 +260,7 @@ class UIClass {
      */
     showShop() {
         this.hideAllOverlays();
-        this.elements['shop-screen']?.classList.remove('hidden');
+        this.toggleScreen(this.elements['shop-screen'], true);
         this.renderShopList();
         this.updateCoinDisplays();
     }
@@ -306,7 +309,7 @@ class UIClass {
      */
     showStats() {
         this.hideAllOverlays();
-        this.elements['stats-screen']?.classList.remove('hidden');
+        this.toggleScreen(this.elements['stats-screen'], true);
         this.renderStats();
     }
     
@@ -334,11 +337,11 @@ class UIClass {
             </div>
             <div class="stat-row">
                 <span class="stat-label">Total Damage Dealt</span>
-                <span class="stat-value">${stats.totalDamageDealt.toLocaleString()}</span>
+                <span class="stat-value">${Math.round(stats.totalDamageDealt).toLocaleString()}</span>
             </div>
             <div class="stat-row">
                 <span class="stat-label">Total Damage Taken</span>
-                <span class="stat-value">${stats.totalDamageTaken.toLocaleString()}</span>
+                <span class="stat-value">${Math.round(stats.totalDamageTaken).toLocaleString()}</span>
             </div>
             <div class="stat-row">
                 <span class="stat-label">Highest Level</span>
@@ -360,7 +363,7 @@ class UIClass {
      */
     showCodex() {
         this.hideAllOverlays();
-        this.elements['codex-screen']?.classList.remove('hidden');
+        this.toggleScreen(this.elements['codex-screen'], true);
         this.renderCodex();
     }
     
@@ -374,7 +377,7 @@ class UIClass {
         const discoveredWeapons = SaveManager.getDiscoveredWeapons();
         const discoveredPassives = SaveManager.getDiscoveredPassives();
         
-        // Rarity colors
+        // Rarity colors and order
         const RARITY_COLORS = {
             COMMON: '#9ca3af',
             UNCOMMON: '#22c55e',
@@ -382,6 +385,8 @@ class UIClass {
             EPIC: '#a855f7',
             LEGENDARY: '#f59e0b',
         };
+        
+        const RARITY_ORDER = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
         
         container.innerHTML = '';
         
@@ -391,7 +396,14 @@ class UIClass {
         weaponHeader.innerHTML = '<span>⚔️ Weapons</span>';
         container.appendChild(weaponHeader);
         
-        for (const [id, weapon] of Object.entries(WEAPONS)) {
+        // Sort weapons by rarity
+        const sortedWeapons = Object.entries(WEAPONS).sort((a, b) => {
+            const rarityA = a[1].rarity || 'COMMON';
+            const rarityB = b[1].rarity || 'COMMON';
+            return RARITY_ORDER.indexOf(rarityA) - RARITY_ORDER.indexOf(rarityB);
+        });
+        
+        for (const [id, weapon] of sortedWeapons) {
             const isDiscovered = discoveredWeapons.includes(id);
             const rarity = weapon.rarity || 'COMMON';
             const rarityClass = `rarity-${rarity.toLowerCase()}`;
@@ -468,6 +480,20 @@ class UIClass {
         
         if (!screen || !choices) return;
         
+        // Get upgrade options
+        const options = this.game.player?.getUpgradeOptions(4) || [];
+        
+        // If no upgrades available (all maxed), skip level-up and give bonus coins
+        if (options.length === 0) {
+            // Give bonus coins instead
+            this.game?.addCoins(25);
+            this.game?.resume();
+            
+            // Show a brief message (optional - you can add a toast notification here)
+            console.log('All upgrades maxed! Bonus coins awarded.');
+            return;
+        }
+        
         levelText.textContent = `Level ${level}`;
         
         // Rarity colors
@@ -478,9 +504,6 @@ class UIClass {
             EPIC: '#a855f7',
             LEGENDARY: '#f59e0b',
         };
-        
-        // Get upgrade options
-        const options = this.game.player?.getUpgradeOptions(4) || [];
         
         choices.innerHTML = '';
         
@@ -508,13 +531,147 @@ class UIClass {
             
             card.addEventListener('click', () => {
                 this.game?.selectUpgrade(option);
-                screen.classList.add('hidden');
+                // element.classList.add('hidden') is too abrupt
+                this.toggleScreen(screen, false);
             });
             
             choices.appendChild(card);
         }
         
-        screen.classList.remove('hidden');
+        this.toggleScreen(screen, true);
+    }
+
+    /**
+     * Helper to fade screens in/out
+     */
+    toggleScreen(element, show) {
+        if (!element) return;
+        
+        // Clear any pending fade timeout to prevent race conditions
+        if (element._fadeTimeout) {
+            clearTimeout(element._fadeTimeout);
+            element._fadeTimeout = null;
+        }
+        
+        if (show) {
+            element.classList.remove('hidden');
+            // Small delay to allow display:block to apply before opacity transition
+            requestAnimationFrame(() => {
+                element.style.opacity = '1';
+            });
+        } else {
+            element.style.opacity = '0';
+            // Wait for transition to finish before hiding
+            element._fadeTimeout = setTimeout(() => {
+                element.classList.add('hidden');
+                element._fadeTimeout = null;
+            }, 300); // Match CSS transition time
+        }
+    }
+    
+    /**
+     * Show gold wheel spin animation for mini-boss kill (interactive)
+     */
+    showLuckWheel(finalGold, callback) {
+        console.log('showGoldWheel called with amount:', finalGold);
+        
+        try {
+            // Get or create wheel overlay
+            let overlay = document.getElementById('luck-wheel-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+            
+            overlay = document.createElement('div');
+            overlay.id = 'luck-wheel-overlay';
+            overlay.style.zIndex = '2000';
+            document.body.appendChild(overlay);
+            
+            // Set up the initial wheel UI with SPIN button
+            overlay.innerHTML = `
+                <div class="luck-wheel-content">
+                    <div class="luck-wheel-title">🎰 MINI-BOSS DEFEATED! 🎰</div>
+                    <div class="luck-wheel-subtitle">You've earned a BIG reward!</div>
+                    <div class="luck-wheel-display">
+                        <div class="luck-wheel-slots">💰 ? 💰</div>
+                    </div>
+                    <div class="luck-wheel-instructions">Spin for GOLD REWARD!</div>
+                    <button class="luck-wheel-spin-btn" id="luck-spin-btn">🎲 SPIN! 🎲</button>
+                    <div class="luck-wheel-result"></div>
+                </div>
+            `;
+            
+            overlay.style.display = 'flex';
+            overlay.classList.remove('hidden');
+            
+            const slotsDiv = overlay.querySelector('.luck-wheel-slots');
+            const resultDiv = overlay.querySelector('.luck-wheel-result');
+            const spinBtn = overlay.querySelector('#luck-spin-btn');
+            const instructionsDiv = overlay.querySelector('.luck-wheel-instructions');
+            
+            if (!slotsDiv || !resultDiv || !spinBtn) {
+                console.error('Wheel elements missing!');
+                callback();
+                return;
+            }
+            
+            spinBtn.addEventListener('click', () => {
+                spinBtn.disabled = true;
+                spinBtn.textContent = 'SPINNING...';
+                spinBtn.style.opacity = '0.5';
+                instructionsDiv.textContent = 'Spinning...';
+                
+                // Using gold values for visual spin
+                const goldValues = [250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750];
+                let spinCount = 0;
+                const totalSpins = 25 + Math.floor(Math.random() * 15);
+                
+                const spinInterval = setInterval(() => {
+                    const currentValue = goldValues[spinCount % goldValues.length];
+                    slotsDiv.innerHTML = `<span class="luck-value" style="color: #fbbf24;">💰 ${currentValue}</span>`;
+                    spinCount++;
+                    
+                    if (spinCount >= totalSpins) {
+                        clearInterval(spinInterval);
+                        
+                        // Show final value
+                        slotsDiv.innerHTML = `<span class="luck-value final" style="color: #fbbf24; text-shadow: 0 0 20px #fbbf24;">💰 ${finalGold}</span>`;
+                        spinBtn.style.display = 'none';
+                        
+                        instructionsDiv.innerHTML = `<span style="color: #fbbf24;">💰 JACKPOT! +${finalGold} COINS! 💰</span>`;
+                        resultDiv.innerHTML = `<div class="luck-desc">Coins added to your stash!</div>`;
+                        
+                        const continueBtn = document.createElement('button');
+                        continueBtn.className = 'luck-wheel-spin-btn';
+                        continueBtn.textContent = '✨ CONTINUE ✨';
+                        continueBtn.style.marginTop = '16px';
+                        resultDiv.appendChild(continueBtn);
+                        
+                        continueBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // overlay.style.display = 'none';
+                            // overlay.classList.add('hidden');
+                            
+                            // Fade out
+                            overlay.style.transition = 'opacity 0.3s';
+                            overlay.style.opacity = '0';
+                            
+                            setTimeout(() => {
+                                if (overlay.parentNode) {
+                                    overlay.parentNode.removeChild(overlay);
+                                }
+                                callback(); // Call callback AFTER removal to prevent input blocking
+                            }, 300);
+                        });
+                    }
+                }, 70);
+            });
+        } catch (err) {
+            console.error('Error in showGoldWheel:', err);
+            callback();
+        }
     }
     
     /**
@@ -545,7 +702,8 @@ class UIClass {
             </div>
         `;
         
-        screen.classList.remove('hidden');
+        // screen.classList.remove('hidden');
+        this.toggleScreen(screen, true);
     }
     
     /**
@@ -576,7 +734,8 @@ class UIClass {
             </div>
         `;
         
-        screen.classList.remove('hidden');
+        // screen.classList.remove('hidden');
+        this.toggleScreen(screen, true);
     }
     
     /**
@@ -591,10 +750,36 @@ class UIClass {
         contentsDiv.innerHTML = `
             <div class="chest-item">${contents.icon}</div>
             <div class="chest-item-name">${contents.name}</div>
-            <div class="chest-item-desc">${contents.isNew ? 'NEW WEAPON!' : `Level ${contents.level}`}</div>
+            <div class="chest-item-desc">${contents.isNew ? (contents.type === 'passive' ? 'NEW PASSIVE!' : 'NEW WEAPON!') : `Level ${contents.level}`}</div>
+            
+            <div class="menu-buttons" style="margin-top: 24px; flex-direction: row; gap: 16px;">
+                <button id="btn-chest-discard" class="menu-btn danger">TRASH 🗑️</button>
+                <button id="btn-chest-keep" class="menu-btn primary">TAKE ✨</button>
+            </div>
         `;
         
-        screen.classList.remove('hidden');
+        screen.classList.remove('hidden'); // legacy
+        this.toggleScreen(screen, true);
+        
+        // Add event listeners for the new buttons
+        const btnTrash = document.getElementById('btn-chest-discard');
+        const btnTake = document.getElementById('btn-chest-keep');
+        
+        if (btnTrash) {
+            btnTrash.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.game?.closeChest(false); // false = discard
+            };
+        }
+        
+        if (btnTake) {
+            btnTake.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.game?.closeChest(true); // true = keep
+            };
+        }
     }
     
     /**
@@ -610,6 +795,109 @@ class UIClass {
             }
         };
         updateHud();
+    }
+    
+    /**
+     * Show pause menu with stats
+     */
+    showPauseMenu() {
+        const screen = this.elements['pause-screen'];
+        if (!screen) return;
+        
+        // Add stats container if it doesn't exist
+        let statsContainer = screen.querySelector('.pause-stats-container');
+        if (!statsContainer) {
+            statsContainer = document.createElement('div');
+            statsContainer.className = 'pause-stats-container';
+            
+            // Insert before buttons
+            const buttons = screen.querySelector('.menu-buttons');
+            if (buttons) {
+                screen.insertBefore(statsContainer, buttons);
+            } else {
+                screen.appendChild(statsContainer);
+            }
+        }
+        
+        if (this.game?.player) {
+            const p = this.game.player;
+            
+            // Collect stats
+            const stats = [
+                { name: 'Max HP', value: Math.ceil(p.maxHp), icon: '❤️' },
+                { name: 'Recovery', value: p.regen.toFixed(1), icon: '💖' },
+                { name: 'Armor', value: Math.floor(p.armor), icon: '🛡️' },
+                { name: 'Move Speed', value: Math.round(p.speed * 10), icon: '👟' },
+                { name: 'Might', value: Math.round(p.damage * 100) + '%', icon: '⚔️' },
+                { name: 'Area', value: Math.round(p.area * 100) + '%', icon: '📏' },
+                { name: 'Proj. Speed', value: Math.round(p.projectileSpeed * 100) + '%', icon: '💨' },
+                { name: 'Cooldown', value: Math.round((1 - p.cooldown/p.baseCooldown) * 100) + '%', icon: '⚡' },
+                { name: 'Luck', value: Math.round(p.luck * 100) + '%', icon: '🍀' },
+                { name: 'Growth', value: Math.round(p.growth * 100) + '%', icon: '🌱' },
+                { name: 'Greed', value: Math.round(p.greed * 100) + '%', icon: '💰' },
+                { name: 'Curse', value: Math.round(p.curse * 100) + '%', icon: '💀' },
+                { name: 'Revival', value: p.revivals, icon: '⚰️' }
+            ];
+            
+            // Format stats HTML
+            let leftStats = '';
+            let rightStats = '';
+            
+            stats.forEach((stat, index) => {
+                const html = `
+                    <div class="stat-item">
+                        <span class="stat-name">${stat.icon} ${stat.name}</span>
+                        <span class="stat-val">${stat.value}</span>
+                    </div>
+                `;
+                if (index < Math.ceil(stats.length / 2)) leftStats += html;
+                else rightStats += html;
+            });
+            
+            // Equipment grids
+            let weaponsHtml = '';
+            p.weapons.forEach(w => {
+                weaponsHtml += `
+                    <div class="equipment-slot">
+                        <div class="equipment-icon">${w.icon || '⚔️'}</div>
+                        <div class="equipment-level">Lv ${w.level}</div>
+                    </div>
+                `;
+            });
+            
+            let passivesHtml = '';
+            p.passives.forEach(pas => {
+                passivesHtml += `
+                    <div class="equipment-slot">
+                        <div class="equipment-icon">${pas.icon || '📘'}</div>
+                        <div class="equipment-level">Lv ${pas.level}</div>
+                    </div>
+                `;
+            });
+
+            statsContainer.innerHTML = `
+                <div class="stats-panel-left">
+                    <div class="stats-group">
+                        <div class="stats-group-title">Player Stats</div>
+                        ${leftStats}
+                    </div>
+                    <div class="stats-group">
+                        <div class="stats-group-title">Weapons</div>
+                        <div class="equipment-grid">${weaponsHtml}</div>
+                    </div>
+                </div>
+                <div class="stats-panel-right">
+                    <div class="stats-group">
+                        <div class="stats-group-title">Attributes</div>
+                        ${rightStats}
+                    </div>
+                    <div class="stats-group">
+                        <div class="stats-group-title">Passives</div>
+                        <div class="equipment-grid">${passivesHtml}</div>
+                    </div>
+                </div>
+            `;
+        }
     }
     
     /**

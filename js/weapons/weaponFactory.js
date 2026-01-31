@@ -15,13 +15,13 @@ import { Lightning } from './lightning.js';
 import { Fireball } from './fireball.js';
 import { IceSpear } from './iceSpear.js';
 import { OrbitalShield } from './orbitalShield.js';
-import { RuneTracer } from './runeTracer.js';
+import { SpectralSword } from './spectralSword.js';
 import { Hellfire } from './hellfire.js';
 import { SoulEater } from './soulEater.js';
 import { VoidBeam } from './voidBeam.js';
 import { ThrowingStar } from './throwingStar.js';
 import { Bone } from './bone.js';
-import { FireChain } from './fireChain.js';
+import { ChainLightning } from './chainLightning.js';
 import { ShadowDagger } from './shadowDagger.js';
 import { ThunderStrike } from './thunderStrike.js';
 import { ReaperScythe } from './reaperScythe.js';
@@ -57,8 +57,8 @@ export class WeaponFactory {
                 return new IceSpear(player);
             case 'orbitalShield':
                 return new OrbitalShield(player);
-            case 'runeTracer':
-                return new RuneTracer(player);
+            case 'spectralSword':
+                return new SpectralSword(player);
             case 'hellfire':
                 return new Hellfire(player);
             case 'soulEater':
@@ -69,8 +69,8 @@ export class WeaponFactory {
                 return new ThrowingStar(player);
             case 'bone':
                 return new Bone(player);
-            case 'fireChain':
-                return new FireChain(player);
+            case 'chainLightning':
+                return new ChainLightning(player);
             case 'shadowDagger':
                 return new ShadowDagger(player);
             case 'thunderStrike':

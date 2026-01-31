@@ -4,7 +4,6 @@
  */
 
 import { Weapon } from './weapon.js';
-import { WEAPONS } from '../data/config.js';
 
 export class ThunderStrike extends Weapon {
     constructor(player) {
@@ -23,16 +22,18 @@ export class ThunderStrike extends Weapon {
             // Create lightning strike at enemy position
             this.game.projectileManager.spawn({
                 x: target.x,
-                y: target.y - 50, // Start above
+                y: target.y,
                 dx: 0,
-                dy: 1,
-                speed: 800,
+                dy: 0,
+                speed: 0,
                 damage: this.damage,
-                pierce: this.pierce,
+                pierce: 999,
                 duration: this.duration,
-                size: 25 * this.area,
+                size: 30 * this.area,
                 color: '#00ffff',
-                type: 'lightning',
+                type: 'melee', // Use melee for instant AoE hit
+                shape: 'lightning',
+                pattern: 'linear',
             });
         }
     }
