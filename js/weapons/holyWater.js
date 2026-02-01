@@ -11,6 +11,7 @@ export class HolyWater extends Weapon {
     }
     
     fire() {
+        this.game.soundManager?.play('shoot', 0.4);
         for (let i = 0; i < this.projectiles; i++) {
             // Random direction
             const angle = Math.random() * Math.PI * 2;

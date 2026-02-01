@@ -25,6 +25,7 @@ export class Lightning extends Weapon {
     }
     
     fire() {
+        this.game.soundManager?.play('lightning', 0.7);
         const enemies = this.getEnemiesInRange(this.range);
         if (enemies.length === 0) return;
         

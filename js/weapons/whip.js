@@ -12,6 +12,7 @@ export class Whip extends Weapon {
     }
     
     fire() {
+        this.game.soundManager?.play('slash', 0.5);
         // Create whip attack zone
         const width = 120 * this.area;
         const height = 40 * this.area;

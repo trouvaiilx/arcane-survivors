@@ -13,6 +13,7 @@ export class ChainLightning extends Weapon {
     }
     
     fire() {
+        this.game.soundManager?.play('lightning', 0.7);
         const data = WEAPONS.chainLightning;
         const game = this.player.game;
         const damage = this.damage;

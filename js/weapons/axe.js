@@ -11,6 +11,7 @@ export class Axe extends Weapon {
     }
     
     fire() {
+        this.game.soundManager?.play('slash', 0.6);
         for (let i = 0; i < this.projectiles; i++) {
             // Random upward angle
             const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.5;

@@ -62,6 +62,7 @@ class UIClass {
     setupEventListeners() {
         // Main menu buttons
         document.getElementById('btn-play')?.addEventListener('click', () => {
+            this.game.soundManager?.play('uiSelect');
             this.startGame();
         });
         
@@ -126,6 +127,13 @@ class UIClass {
         // Chest
         document.getElementById('btn-chest-close')?.addEventListener('click', () => {
             this.game?.closeChest();
+        });
+
+        // Add hover sounds to all menu buttons
+        document.querySelectorAll('.menu-btn').forEach(btn => {
+            btn.addEventListener('mouseenter', () => {
+                this.game.soundManager?.play('uiHover');
+            });
         });
         
         // Keyboard shortcuts
@@ -474,6 +482,9 @@ class UIClass {
      * Show level up screen
      */
     showLevelUp(level) {
+        // Play level up sound
+        this.game.soundManager?.play('levelUp');
+
         const screen = this.elements['level-up-screen'];
         const levelText = this.elements['current-level'];
         const choices = this.elements['upgrade-choices'];
@@ -530,6 +541,7 @@ class UIClass {
             `;
             
             card.addEventListener('click', () => {
+                this.game.soundManager?.play('uiSelect');
                 this.game?.selectUpgrade(option);
                 // element.classList.add('hidden') is too abrupt
                 this.toggleScreen(screen, false);

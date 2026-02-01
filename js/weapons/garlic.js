@@ -39,6 +39,7 @@ export class Garlic extends Weapon {
     }
     
     fire() {
+        this.game.soundManager?.play('slash', 0.3);
         const enemies = this.getEnemiesInRange(this.radius);
         
         for (const enemy of enemies) {

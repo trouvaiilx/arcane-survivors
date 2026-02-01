@@ -136,28 +136,33 @@ export class PickupManager {
             case 'xp':
                 player.addXp(pickup.value);
                 this.game.particles.spawn(pickup.x, pickup.y, '#22c55e', 5);
+                this.game.soundManager?.play('pickupXP', 0.3);
                 break;
                 
             case 'coin':
                 const coinValue = Math.ceil(pickup.value * (player.baseGreed || 1));
                 this.game.addCoins(coinValue);
                 this.game.particles.spawn(pickup.x, pickup.y, '#fbbf24', 5);
+                this.game.soundManager?.play('pickupCoin', 0.5);
                 break;
                 
             case 'chicken':
                 player.heal(pickup.value);
                 this.game.particles.spawn(pickup.x, pickup.y, '#f97316', 8);
+                this.game.soundManager?.play('pickupHeal');
                 break;
                 
             case 'chest':
                 this.openChest();
                 this.game.particles.burst(pickup.x, pickup.y, '#fbbf24', 20);
+                this.game.soundManager?.play('pickupChest');
                 break;
                 
             case 'magnet':
                 this.magnetizeAllXp();
                 this.game.particles?.burst(pickup.x, pickup.y, '#ef4444', 30);
                 this.game.particles?.burst(player.x, player.y, '#22c55e', 20);
+                this.game.soundManager?.play('pickupXP', 0.8);
                 break;
                 
             case 'rosary':

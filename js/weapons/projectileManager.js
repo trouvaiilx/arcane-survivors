@@ -390,6 +390,8 @@ export class ProjectileManager {
                 case 'fire':
                     this.renderFireOrb(ctx, p);
                     break;
+                case 'invisible':
+                    break;
                 default:
                     this.renderDefaultProjectile(ctx, p);
                     break;

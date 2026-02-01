@@ -6,6 +6,7 @@
 import { Game } from "./engine/game.js";
 import { AssetLoader } from "./engine/assets.js";
 import { SaveManager } from "./meta/saveManager.js";
+import { SoundManager } from "./engine/soundManager.js";
 import { UI } from "./ui/ui.js";
 
 // Global game instance
@@ -19,6 +20,9 @@ async function init() {
 
   // Initialize save data
   SaveManager.init();
+  
+  // Load sounds (parallel with assets)
+  const soundPromise = SoundManager.loadAll();
 
   // Setup canvas
   const canvas = document.getElementById("game-canvas");
@@ -47,9 +51,15 @@ async function init() {
   console.log("📦 Loading assets...");
   await AssetLoader.loadAll();
   console.log("✅ Assets loaded!");
+  
+  // Wait for sounds
+  await soundPromise;
 
   // Create game instance AFTER canvas is sized
   game = new Game(canvas);
+  
+  // Link sound manager to game
+  game.soundManager = SoundManager;
   
   // Ensure game has correct dimensions
   game.resize(canvas.width, canvas.height);
@@ -71,4 +81,4 @@ if (document.readyState === "loading") {
 }
 
 // Expose game for debugging
-window.arcaneGame = { getGame: () => game };
+window.arcaneGame = { getGame: () => game, sound: SoundManager };

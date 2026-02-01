@@ -11,6 +11,7 @@ export class Cross extends Weapon {
     }
     
     fire() {
+        this.game.soundManager?.play('slash', 0.5);
         for (let i = 0; i < this.projectiles; i++) {
             // Calculate direction - spread in circle
             const baseAngle = (i / this.projectiles) * Math.PI * 2;

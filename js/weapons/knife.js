@@ -11,6 +11,7 @@ export class Knife extends Weapon {
     }
     
     fire() {
+        this.game.soundManager?.play('shoot', 0.4);
         for (let i = 0; i < this.projectiles; i++) {
             // Try to find a random enemy to target
             const target = this.game.enemyManager?.getRandomEnemyInRange(

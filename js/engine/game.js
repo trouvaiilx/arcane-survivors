@@ -153,6 +153,9 @@ export class Game {
         // Setup camera
         this.camera.follow(this.player);
         
+        // Start gameplay music
+        this.soundManager?.playMusic('gameplay', true);
+
         // Change state
         this.setState(GameState.PLAYING);
         
@@ -176,6 +179,9 @@ export class Game {
         const y = margin + Math.random() * (this.mapHeight - margin * 2);
         
         this.portal = new Portal(this, x, y, 'spark');
+
+        // Play portal sound
+        this.soundManager?.play('portalOpen');
     }
     
     /**
@@ -187,6 +193,9 @@ export class Game {
         
         // Spawn boss near the player
         this.spawnBoss();
+
+        // Play boss warning sound
+        this.soundManager?.play('bossSpawn', 0.5);
         
         // Show warning
         this.showBossWarning();
@@ -420,6 +429,10 @@ export class Game {
      */
     onBossDefeated(boss) {
         this.bossDefeated = true;
+
+        // Play boss defeat sound
+        this.soundManager?.play('bossDefeat');
+        
         this.currentBoss = null;
         
         // Hide boss health bar
@@ -845,6 +858,10 @@ export class Game {
      */
     gameOver() {
         this.setState(GameState.GAME_OVER);
+
+        // Play game over sound and stop music
+        this.soundManager?.play('gameOver');
+        this.soundManager?.stopMusic(true);
         
         // Save stats
         SaveManager.addCoins(this.coinsCollected);
@@ -871,6 +888,10 @@ export class Game {
      */
     victory() {
         this.setState(GameState.VICTORY);
+
+        // Play victory sound and stop music
+        this.soundManager?.play('victory');
+        this.soundManager?.stopMusic(true);
         
         // Bonus coins for victory
         const victoryCoinBonus = 500;
@@ -921,6 +942,9 @@ export class Game {
         if (this.state !== GameState.MENU) {
             SaveManager.addCoins(this.coinsCollected);
         }
+
+        // Stop music
+        this.soundManager?.stopMusic(true);
         
         this.setState(GameState.MENU);
         this.player = null;

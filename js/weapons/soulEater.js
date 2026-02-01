@@ -13,6 +13,7 @@ export class SoulEater extends Weapon {
     }
     
     fire() {
+        this.game.soundManager?.play('shoot', 0.4);
         const target = this.getNearestEnemy();
         
         for (let i = 0; i < this.projectiles; i++) {

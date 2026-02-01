@@ -11,6 +11,7 @@ export class Fireball extends Weapon {
     }
     
     fire() {
+        this.game.soundManager?.play('shoot', 0.5);
         const target = this.getNearestEnemy();
         
         for (let i = 0; i < this.projectiles; i++) {
@@ -61,6 +62,7 @@ export class Fireball extends Weapon {
                     shape: 'fireball',
                     trailLength: 12,
                     onHit: (proj, target) => {
+                        this.game.soundManager?.play('explosion', 0.6);
                         // AoE Damage
                         const radius = 60 * this.area;
                         const enemies = this.game.enemyManager.getEnemiesNear(proj.x, proj.y, radius);

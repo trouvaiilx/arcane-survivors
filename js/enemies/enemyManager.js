@@ -236,6 +236,9 @@ export class EnemyManager {
         
         this.enemies.push(enemy);
         this.addToSpatialHash(enemy);
+
+        // Play boss spawn sound
+        this.game.soundManager?.play('bossSpawn');
         
         // Screen shake
         this.game.camera.shake(15, 500);
@@ -403,6 +406,13 @@ export class EnemyManager {
         
         enemy.hp -= finalDamage;
         enemy.currentHp = enemy.hp;
+
+        // Play hit sound based on enemy type
+        if (enemy.isBoss) {
+            this.game.soundManager?.play('bossHit', 0.8);
+        } else {
+            this.game.soundManager?.play('enemyHit', 0.5);
+        }
         
         // Damage number
         const color = enemy.isBoss ? '#fbbf24' : (enemy.isMiniBoss ? '#a855f7' : '#ffffff');
@@ -432,6 +442,12 @@ export class EnemyManager {
         
         enemy.dead = true;
         this.game.addKill();
+
+        if (enemy.isBoss) {
+            this.game.soundManager?.play('bossDefeat');
+        } else {
+            this.game.soundManager?.play('enemyDeath', 0.6);
+        }
         
         // Handle boss death
         if (enemy.isBoss) {

@@ -248,6 +248,9 @@ export class Player {
      */
     takeDamage(amount) {
         if (this.invincible) return;
+
+        // Play hit sound
+        this.game.soundManager?.play('playerHit');
         
         // Apply curse multiplier (bidirectional - player also takes more damage)
         const curseMultiplier = this.curse || 1;
@@ -335,6 +338,10 @@ export class Player {
      */
     levelUp() {
         this.level++;
+
+        // Play level up sound
+        this.game.soundManager?.play('levelUp');
+        
         this.xpToLevel = Math.floor(
             GAME_CONFIG.xp.baseToLevel * 
             Math.pow(GAME_CONFIG.xp.levelMultiplier, this.level - 1)
